@@ -2,7 +2,7 @@
 # مسیر در ریپو: .github/workflows/build-telegram-bot-api.yml  ->  Actions > Run workflow
 # توجه: این فایل آزمایش نشده؛ اگر بیلد خطا داد لاگ را بفرست تا اصلاح کنیم.
 name: build-telegram-bot-api
-on: workflow_dispatch
+on: [push, workflow_dispatch]
 jobs:
   build:
     runs-on: ubuntu-latest
