@@ -1,0 +1,26 @@
+# ورک‌فلوی گیت‌هاب: ساخت باینری استاتیک telegram-bot-api از سورس رسمی (tdlib)
+# مسیر در ریپو: .github/workflows/build-telegram-bot-api.yml  ->  Actions > Run workflow
+# توجه: این فایل آزمایش نشده؛ اگر بیلد خطا داد لاگ را بفرست تا اصلاح کنیم.
+name: build-telegram-bot-api
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: بیلد استاتیک روی Alpine (musl) تا روی هر سرور لینوکسی اجرا شود
+        run: |
+          mkdir -p out
+          docker run --rm -v "$PWD/out:/out" alpine:3.20 sh -c '
+            apk add --no-cache build-base cmake git gperf linux-headers openssl-dev openssl-libs-static zlib-dev zlib-static &&
+            git clone --recursive --depth 1 https://github.com/tdlib/telegram-bot-api.git &&
+            cd telegram-bot-api && mkdir build && cd build &&
+            cmake -DCMAKE_BUILD_TYPE=Release -DOPENSSL_USE_STATIC_LIBS=TRUE -DZLIB_USE_STATIC_LIBS=ON \
+                  -DCMAKE_EXE_LINKER_FLAGS="-static" .. &&
+            cmake --build . --target telegram-bot-api -j2 &&
+            strip telegram-bot-api && cp telegram-bot-api /out/ &&
+            file telegram-bot-api || true'
+          ls -la out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: telegram-bot-api
+          path: out/telegram-bot-api
