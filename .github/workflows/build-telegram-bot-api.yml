@@ -1,8 +1,11 @@
 # ورک‌فلوی گیت‌هاب: ساخت باینری استاتیک telegram-bot-api از سورس رسمی (tdlib)
-# مسیر در ریپو: .github/workflows/build-telegram-bot-api.yml  ->  Actions > Run workflow
+# مسیر در ریپو: .github/workflows/build-telegram-bot-api.yml
+# بعد از بیلد، باینری در بخش Releases ریپو منتشر می‌شود تا با لینک مستقیم (BOTAPI_URL) دانلود شود.
 # توجه: این فایل آزمایش نشده؛ اگر بیلد خطا داد لاگ را بفرست تا اصلاح کنیم.
 name: build-telegram-bot-api
 on: [push, workflow_dispatch]
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -17,10 +20,14 @@ jobs:
             cmake -DCMAKE_BUILD_TYPE=Release -DOPENSSL_USE_STATIC_LIBS=TRUE -DZLIB_USE_STATIC_LIBS=ON \
                   -DCMAKE_EXE_LINKER_FLAGS="-static" .. &&
             cmake --build . --target telegram-bot-api -j2 &&
-            strip telegram-bot-api && cp telegram-bot-api /out/ &&
-            file telegram-bot-api || true'
+            strip telegram-bot-api && cp telegram-bot-api /out/'
           ls -la out
-      - uses: actions/upload-artifact@v4
-        with:
-          name: telegram-bot-api
-          path: out/telegram-bot-api
+          sha256sum out/telegram-bot-api
+      - name: انتشار باینری در Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "bot-api-${{ github.run_number }}" out/telegram-bot-api \
+            --repo "${{ github.repository }}" \
+            --title "telegram-bot-api build ${{ github.run_number }}" \
+            --notes "sha256: $(sha256sum out/telegram-bot-api | cut -d' ' -f1)"
