@@ -15,9 +15,8 @@ const DATA_DIR = 'data';
 const HEARTBEAT_FILE = path.join(DATA_DIR, 'heartbeat.txt'); // هر اجرا عوض می‌شود تا ریپو فعال بماند
 const CONCURRENCY = Number(process.env.CONCURRENCY || 150);  // تعداد اتصال همزمان
 const TIMEOUT_MS = Number(process.env.TIMEOUT_MS || 7000);   // مهلت هر سرور
-const MAX_SAVED = Number(process.env.MAX_SAVED || 300);      // حداکثر خط در خروجی
+const MAX_SERVERS = Number(process.env.MAX_SERVERS || 100);  // تعداد سرور (هر سرور = ۲ خط: هاست‌نیم + آی‌پی)
 const MIN_ALIVE_TO_SAVE = 3;                                 // کمتر از این → فایل قبلی حفظ می‌شود
-const HOST_MODE = process.env.HOST_MODE || 'hostname';       // hostname | ip
 const CSV_URL = 'http://www.vpngate.net/api/iphone/';
 const HTML_URLS = ['https://www.vpngate.net/en/'];
 const FALLBACK_PORTS = [443, 995, 992];                      // وقتی پورت TCP سرور معلوم نیست
@@ -211,20 +210,21 @@ async function cmdScan() {
     return;
   }
 
-  // یک خط برای هر IP (اگر چند هاست‌نیم یا پورت داشت، سریع‌ترین)
+  // یک سرور برای هر IP (سریع‌ترین). هر سرور: خط هاست‌نیم و درست زیرش خط آی‌پی
   alive.sort((a, b) => a.ms - b.ms);
   const seenIp = new Set();
   const lines = [];
+  let count = 0;
   for (const a of alive) {
     if (seenIp.has(a.ip)) continue;
     seenIp.add(a.ip);
-    const host = HOST_MODE === 'ip' ? a.ip : a.host;
-    lines.push(`${host}:${a.port}:vpn:vpn:${a.cc}`);
-    if (lines.length >= MAX_SAVED) break;
+    if (!net.isIP(a.host)) lines.push(`${a.host}:${a.port}:vpn:vpn:${a.cc}`);
+    lines.push(`${a.ip}:${a.port}:vpn:vpn:${a.cc}`);
+    if (++count >= MAX_SERVERS) break;
   }
   fs.writeFileSync(OUT_FILE, lines.join('\n') + '\n');
-  writeHeartbeat(`زنده: ${alive.length}/${targets.length} — ذخیره: ${lines.length}`);
-  console.log(`${lines.length} سرور در ${OUT_FILE} ذخیره شد`);
+  writeHeartbeat(`زنده: ${alive.length}/${targets.length} — ذخیره: ${count} سرور (${lines.length} خط)`);
+  console.log(`${count} سرور (${lines.length} خط) در ${OUT_FILE} ذخیره شد`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
