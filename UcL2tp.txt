@@ -1,6 +1,8 @@
 L2TP:vpn579127873.opengw.net::vpn:vpn:vpn:@UCIRANIR1:de
 L2TP:149.102.146.143::vpn:vpn:vpn:@UCIRANIR2:de
-L2TP:vpn763562980.opengw.net::vpn:vpn:vpn:@UCIRANIR3:am
-L2TP:37.252.65.108::vpn:vpn:vpn:@UCIRANIR4:am
-L2TP:vpn980909101.opengw.net::vpn:vpn:vpn:@UCIRANIR5:jp
-L2TP:59.190.112.50::vpn:vpn:vpn:@UCIRANIR6:jp
+L2TP:vpn795006575.opengw.net::vpn:vpn:vpn:@UCIRANIR3:kr
+L2TP:222.232.103.200::vpn:vpn:vpn:@UCIRANIR4:kr
+L2TP:vpn73271908600.opengw.net::vpn:vpn:vpn:@UCIRANIR5:cn
+L2TP:123.249.111.151::vpn:vpn:vpn:@UCIRANIR6:cn
+L2TP:vpn980909101.opengw.net::vpn:vpn:vpn:@UCIRANIR7:jp
+L2TP:59.190.112.50::vpn:vpn:vpn:@UCIRANIR8:jp
