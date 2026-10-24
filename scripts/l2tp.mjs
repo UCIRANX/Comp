@@ -65,11 +65,12 @@ export function parseCsv(text) {
 }
 
 // ───────────────────────── پارس HTML وی‌پی‌ان‌گیت ─────────────────────────
-// هر سطر جدول که هاست‌نیم opengw.net و IP داشته باشد
+// فقط سطرهایی که ستون L2TP/IPsec دارند (در سطر خام کلمه l2tp هست) و هاست‌نیم opengw.net و IP دارند
 export function parseVpngateHtml(html, countryNames = []) {
   const names = [...countryNames].sort((a, b) => b.length - a.length);
   const out = [];
   for (const chunk of html.split(/<tr[\s>]/i).slice(1)) {
+    if (!/l2tp/i.test(chunk)) continue; // سرور بدون L2TP
     const text = htmlToText(chunk);
     const host = /\b([A-Za-z0-9-]+\.opengw\.net)\b/i.exec(text)?.[1];
     const ip = /\b((?:\d{1,3}\.){3}\d{1,3})\b/.exec(text)?.[1];
@@ -93,11 +94,15 @@ export function parseIpspeed(html) {
 
 // ───────────────────────── ساخت لیست کاندیدها ─────────────────────────
 export function buildCandidates(csvRows, vgRows, ipsRows) {
+  // CSV فلگ L2TP ندارد؛ فقط برای پیدا کردن کد کشور و هاست‌نیم از روی IP استفاده می‌شود
   const longToShort = new Map(Object.entries(COUNTRY_FALLBACK));
   const ipToCc = new Map();
+  const ipToHost = new Map();
   for (const r of csvRows) {
     if (r.countryLong && r.cc) longToShort.set(r.countryLong, r.cc);
     if (r.cc) ipToCc.set(r.ip, r.cc);
+    const h = r.hostName.toLowerCase();
+    ipToHost.set(r.ip, h.includes('.') ? h : h + DOMAIN);
   }
   const map = new Map(); // کلید: ip
   const add = (ip, host, cc) => {
@@ -108,12 +113,8 @@ export function buildCandidates(csvRows, vgRows, ipsRows) {
       if (cc && cur.cc === 'xx') cur.cc = cc.toLowerCase();
     }
   };
-  for (const r of csvRows) {
-    const h = r.hostName.toLowerCase();
-    add(r.ip, h.includes('.') ? h : h + DOMAIN, r.cc);
-  }
   for (const r of vgRows) add(r.ip, r.host, ipToCc.get(r.ip) || longToShort.get(r.countryLong));
-  for (const r of ipsRows) add(r.ip, '', ipToCc.get(r.ip) || longToShort.get(r.countryLong));
+  for (const r of ipsRows) add(r.ip, ipToHost.get(r.ip) || '', ipToCc.get(r.ip) || longToShort.get(r.countryLong));
   return [...map.values()];
 }
 
@@ -139,11 +140,11 @@ function writeHeartbeat(note) {
 async function cmdRun() {
   console.log('دریافت لیست‌ها ...');
   let csvRows = [], vgRows = [], ipsRows = [];
-  try { csvRows = parseCsv(await fetchText(CSV_URL)); console.log(`vpngate CSV: ${csvRows.length} سرور`); }
+  try { csvRows = parseCsv(await fetchText(CSV_URL)); console.log(`vpngate CSV: ${csvRows.length} سرور (فقط برای کشور/هاست‌نیم)`); }
   catch (e) { console.log('خطا در CSV: ' + e.message); }
 
   const names = [...new Set([...csvRows.map((r) => r.countryLong).filter(Boolean), ...Object.keys(COUNTRY_FALLBACK)])];
-  try { vgRows = parseVpngateHtml(await fetchText(VPNGATE_HTML), names); console.log(`vpngate HTML: ${vgRows.length} سرور`); }
+  try { vgRows = parseVpngateHtml(await fetchText(VPNGATE_HTML), names); console.log(`vpngate HTML: ${vgRows.length} سرور دارای L2TP`); }
   catch (e) { console.log('خطا در HTML وی‌پی‌ان‌گیت: ' + e.message); }
 
   try { ipsRows = parseIpspeed(await fetchText(IPSPEED_URL, BROWSER_UA, 2)); console.log(`ipspeed: ${ipsRows.length} سرور`); }
@@ -151,8 +152,8 @@ async function cmdRun() {
 
   const targets = buildCandidates(csvRows, vgRows, ipsRows);
   if (!targets.length) {
-    console.log('هیچ سروری دریافت نشد — فایل قبلی حفظ شد');
-    writeHeartbeat('دریافت لیست ناموفق بود');
+    console.log('هیچ سرور L2TP پیدا نشد — فایل قبلی حفظ شد');
+    writeHeartbeat('هیچ سرور L2TP پیدا نشد');
     return;
   }
 
