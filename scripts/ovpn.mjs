@@ -1,7 +1,7 @@
 // scripts/ovpn.mjs  —  استفاده:  node scripts/ovpn.mjs
 // Node 20+ ، بدون وابستگی خارجی
 // کار: دریافت لیست vpngate.net  ←  اسکن واقعی OpenVPN (TCP و UDP)  ←  نوشتن UcOvpn.txt
-// فرمت هر خط:  ip:port:proto:cc:base64(کانفیگ کامل OpenVPN)
+// فرمت هر خط:  proto:cc:base64(کانفیگ کامل OpenVPN)
 import crypto from 'node:crypto';
 import dgram from 'node:dgram';
 import fs from 'node:fs';
@@ -16,7 +16,7 @@ const HEARTBEAT_FILE = path.join(DATA_DIR, 'ovpn-heartbeat.txt'); // هر اجر
 const CONCURRENCY = Number(process.env.CONCURRENCY || 150);       // تعداد تست همزمان
 const TIMEOUT_MS = Number(process.env.TIMEOUT_MS || 7000);        // مهلت کل هر سرور
 const UDP_TRIES = 2;                                              // UDP پاسخ تضمین‌شده ندارد، پس دو بار تست می‌شود
-const MAX_SERVERS = Number(process.env.MAX_SERVERS || 100);       // تعداد سرور (هر سرور = ۲ خط: هاست‌نیم + آی‌پی)
+const MAX_SERVERS = 50;                                           // حداکثر ۵۰ کانفیگ در هر اجرا، هر کانفیگ یک خط
 const MIN_ALIVE_TO_SAVE = 3;                                      // کمتر از این → فایل قبلی حفظ می‌شود
 const CSV_URL = 'http://www.vpngate.net/api/iphone/';
 const DOMAIN = '.opengw.net';
@@ -220,7 +220,7 @@ async function cmdScan() {
     return;
   }
 
-  // یک خط برای هر ip+proto (سریع‌ترین). هر خط: ip:port:proto:cc:base64
+  // یک خط برای هر ip+proto (سریع‌ترین). هر خط: proto:cc:base64
   alive.sort((a, b) => a.ms - b.ms);
   const seen = new Set();
   const lines = [];
@@ -229,7 +229,7 @@ async function cmdScan() {
     const k = `${a.ip}:${a.proto}`;
     if (seen.has(k)) continue;
     seen.add(k);
-    lines.push(`${a.ip}:${a.port}:${a.proto}:${a.cc}:${a.cfgB64}`);
+    lines.push(`${a.proto}:${a.cc}:${a.cfgB64}`);
     if (++count >= MAX_SERVERS) break;
   }
   fs.writeFileSync(OUT_FILE, lines.join('\n') + '\n');
