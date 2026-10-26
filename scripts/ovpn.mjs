@@ -16,7 +16,7 @@ const HEARTBEAT_FILE = path.join(DATA_DIR, 'ovpn-heartbeat.txt'); // هر اجر
 const CONCURRENCY = Number(process.env.CONCURRENCY || 150);       // تعداد تست همزمان
 const TIMEOUT_MS = Number(process.env.TIMEOUT_MS || 7000);        // مهلت کل هر سرور
 const UDP_TRIES = 2;                                              // UDP پاسخ تضمین‌شده ندارد، پس دو بار تست می‌شود
-const MAX_SERVERS = 50;                                           // حداکثر ۵۰ کانفیگ در هر اجرا، هر کانفیگ یک خط
+const MAX_SERVERS = 70;                                           // حداکثر ۷۰ کانفیگ در هر اجرا، هر کانفیگ یک خط
 const MIN_ALIVE_TO_SAVE = 3;                                      // کمتر از این → فایل قبلی حفظ می‌شود
 const CSV_URL = 'http://www.vpngate.net/api/iphone/';
 const DOMAIN = '.opengw.net';
@@ -80,6 +80,7 @@ export function parseCsv(text) {
 export function buildTargets(rows) {
   const map = new Map();
   for (const r of rows) {
+    if (r.port === 443) continue; // سرورهای پورت 443 اضافه نمی‌شوند
     const key = `${r.ip}:${r.proto}:${r.port}`;
     if (map.has(key)) continue;
     const h = r.hostName.toLowerCase();
